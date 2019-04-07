@@ -1,0 +1,39 @@
+sudo: required
+services:
+  - docker
+
+# Build a test version of our client project
+# and then run some tests inside of it
+before_install:
+  # We only get access to the test suite in dev as that has all the 
+  # dependencies needed. In a prod version we only have static files
+  # -f specifies the dev Dockerfile. ./client is the build context
+  - docker build -t sxa011/react-test -f ./client/dev.Dockerfile ./client
+
+# This is the test running section, if any of these
+# runs fail, travis CI will assume the build has failed
+script:
+  # Specify the image to run and the command to run, in this case 
+  # the image we created in the previous ste and the command is to 
+  # run the tests without watch mode (hence the -- --coverage)
+  - docker run sxa011/react-test npm test -- --coverage
+
+# This is run after all the tests pass above and will be 
+# building production versions of the project and pushing
+# the built images to Docker Hub
+after_success:
+  # Uses the production Dockerfile by default
+  - docker build -t sxa011/multi-client ./client
+  - docker build -t sxa011/multi-nginx ./nginx
+  - docker build -t sxa011/multi-server ./server
+  - docker build -t sxa011/multi-worker ./worker
+
+  # Log in to the docker CLI
+  # This pipes in the password into a stdin prompt
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+
+  # Take these images and push them to docker hub
+  - docker push sxa011/multi-client
+  - docker push sxa011/multi-nginx
+  - docker push sxa011/multi-server
+  - docker push sxa011/multi-worker
