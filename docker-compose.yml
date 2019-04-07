@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+  postgres: 
+    # It will pull this image down from dockerhub
+    image: 'postgres:latest'
+  
+  redis:
+    image: 'redis:latest'
+  
+  api:
+    build:
+      # We only need to specify the name of the file for
+      # this property, the path will be specified in context
+      dockerfile: dev.Dockerfile
+      context: ./server
+    # anytime someone accesses anything in /app (except for
+    # node_modules) it will get redirected back to the local
+    # machine directory of ./server
+    volumes:
+      - /app/node_modules
+      - ./server:/app
+    environment:
+      # Whenever we want to specify the 'host' of a running
+      # container we can just say the service name and docker
+      # compose is intelligent enough to workout what it is
+      - REDIS_HOST=redis
+      # Port number can be configured if needed - default
+      - REDIS_PORT=6379
+      - PGUSER=postgres
+      # The host here is the 'postgres' service name
+      - PGHOST=postgres
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432
+    depends_on:
+      - postgres
+  
+  client:
+    build:
+      dockerfile: dev.Dockerfile
+      context: ./client
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+
+  worker:
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    build:
+      dockerfile: dev.Dockerfile
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+
+  nginx:
+    # Always attempt to restart if nginx is down
+    restart: always
+    build: 
+      dockerfile: dev.Dockerfile
+      context: ./nginx
+    ports:
+      - '3050:80'
+    depends_on:
+      - client
+      - api
