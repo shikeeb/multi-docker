@@ -37,3 +37,34 @@ after_success:
   - docker push sxa011/multi-nginx
   - docker push sxa011/multi-server
   - docker push sxa011/multi-worker
+
+# This will push the Dockerrun.aws.json file to AWS Elastic Beanstalk
+deploy:
+  # Travis CI comes pre-configured to deploy to some cloud providers
+  provider: elasticbeanstalk
+  # Region where you created the beanstalk instance (see EB URL)
+  region: eu-west-2
+  # Same name you've given the app in AWS 
+  app: multi-docker
+  # Environment of the app in AWS
+  env: MultiDocker-env
+  # Travis will zip all files in repo and copy them over to an 
+  # S3 bucket on AWS - then Travis CI will tell EB to update itself
+  # now that the contents have changed - we have to provide the name
+  # of that bucket (Search 'Service > S3')
+  bucket_name: elasticbeanstalk-eu-west-2-382136745092
+  # The S3 instance gets re-used for all your Elastic Beanstalk 
+  # so we have to specify the path of the files in there. By default
+  # a folder isn't created for your app until you deploy for the 
+  # first time, it will be the app name typically
+  bucket_path: multi-docker
+  # We only want to deploy the app to AWS whenever something gets
+  # merged with the master branch and not with any feature branches
+  on:
+    branch: master
+  # AWS Access Keys, use Travis CI to store Access Key and Secret
+  # key as environment variables- then refer to them in here. Never 
+  # store the keys directly in this file, especially in public repos.
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key:
+    secure: $AWS_SECRET_KEY
